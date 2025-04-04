@@ -52,10 +52,10 @@ def positive_int(n: int) -> int:
     try:
         n = int(n)
     except ValueError:
-        raise argparse.ArgumentTypeError(f'the number of threads should be a number ("{type(n)}" found) !')
+        raise argparse.ArgumentTypeError(f'should be a number ("{type(n)}" found) !')
 
     if n <= 0:
-        raise argparse.ArgumentTypeError(f'the number of threads should be positive ({n} found) !')
+        raise argparse.ArgumentTypeError(f'should be strictly positive ({n} found) !')
     
     return n
 
@@ -111,6 +111,13 @@ class ParserUi:
             type=positive_int,
             help='Specify the number of threads to use. If not set, it gets the number of thread available on the current machine'
         )
+
+        self.parser.add_argument(
+            '-m', '--min',
+            default=1,
+            type=positive_int,
+            help='try only words with at least MIN characters'
+        )
         self.parser.add_argument(
             '-l', '--limit',
             type=int,
@@ -132,7 +139,7 @@ class ParserUi:
         if alf in alphabets:
             alf = alphabets[alf]
 
-        launch_multithreads(args.hash, alf, args.algorithm, args.limit, verbose=(not args.silent), nb_threads=args.nb_threads)
+        launch_multithreads(args.hash, alf, args.algorithm, args.min, args.limit, verbose=(not args.silent), nb_threads=args.nb_threads)
 
 
     class Version(argparse.Action):

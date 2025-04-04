@@ -45,7 +45,7 @@ def found(i, n, word, t0, stop_event, verbose):
     stop_event.set()
 
 
-def thread_i(i: int, n: int, alf: str, expected: str, hash_func: str, stop_event, limit: int | None = None, verbose: bool = False):
+def thread_i(i: int, n: int, alf: str, expected: str, hash_func: str, stop_event, min_: int = 0, limit: int | None = None, verbose: bool = False):
     '''
     Code run by the thread #i.
 
@@ -55,6 +55,7 @@ def thread_i(i: int, n: int, alf: str, expected: str, hash_func: str, stop_event
     - expected   : the hash to crack ;
     - hash_func  : the name of the hash function to use ;
     - stop_event : the Manager.Event that is set when password is found to stop all the processes ;
+    - min_       : the minimum length of the words to try ;
     - limit      : the maximum length of the words to try. If None, there is no limit ;
     - verbose    : indicate if being verbose or not ;
     '''
@@ -72,7 +73,7 @@ def thread_i(i: int, n: int, alf: str, expected: str, hash_func: str, stop_event
         cond = lambda x: True
 
     #---Loop
-    word_nb = i
+    word_nb = G.N ** (min_ - 1) + i - 1
     while cond(word_nb):
         word = G.get_word(word_nb)
 
@@ -99,13 +100,14 @@ def thread_i(i: int, n: int, alf: str, expected: str, hash_func: str, stop_event
         if word_nb % large_nb < n and stop_event.is_set():
             return
 
-def launch_multithreads(hsh: str, alf: str, hash_func: str, limit: int | None = None, verbose: bool = True, nb_threads=None):
+def launch_multithreads(hsh: str, alf: str, hash_func: str, min_: int = 0, limit: int | None = None, verbose: bool = True, nb_threads=None):
     '''
     Launch a sample test on multiple threads.
 
     - hsh        : the hash to crack ;
     - alf        : the alphabet to use to brute force ;
     - hash_func  : the name of the hash function to use ;
+    - min_       : the minimum length of the words to try ;
     - limit      : the maximum length of the words to try. If None, there is no limit ;
     - verbose    : indicate if being verbose or not ;
     - nb_threads : the number of threads to use. If None (default), will be set to the number of available cores.
@@ -130,6 +132,7 @@ def launch_multithreads(hsh: str, alf: str, hash_func: str, limit: int | None = 
             hsh,
             hash_func,
             stop_event,
+            min_,
             limit,
             verbose,
         )
