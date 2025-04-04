@@ -4,7 +4,7 @@
 #--------------------------------
 #
 # Author            : Lasercata
-# Last modification : 2025.04.02
+# Last modification : 2025.04.04
 # Version           : v1.0.0
 #
 #--------------------------------
@@ -17,13 +17,47 @@ import argparse
 from os.path import isfile, isdir, abspath
 
 #---Project
-# from src.MeiToGraph import MeiToGraph
-# from src.utils import log, basename, write_file
+from src.multithreading import launch_multithreads
+from src.hash_crack import algorithms_available
 
 
 ##-Init
-version = '0.1.0'
+version = '1.0.0'
 
+alphabets = {
+    '[0-9]': '0123456789',
+    '[a-z]': 'abcdefghijklmnopqrstuvwxyz',
+    '[A-Z]': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    '[a-z0-9]': 'abcdefghijklmnopqrstuvwxyz0123456789',
+    '[a-zA-Z]': 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    '[a-zA-Z0-9]': 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+}
+
+##-Types
+def hash_algo(h: str) -> str:
+    '''
+    Raises an argument parser type error if 'h' is not a hash function name.
+
+    - h : the hash function name to test.
+    '''
+
+    if h not in algorithms_available:
+        raise argparse.ArgumentTypeError(f'"{h}" is not available as a hash')
+
+    return h
+
+def positive_int(n: int) -> int:
+    '''If n <= 0, raises an argument type error.'''
+
+    try:
+        n = int(n)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f'the number of threads should be a number ("{type(n)}" found) !')
+
+    if n <= 0:
+        raise argparse.ArgumentTypeError(f'the number of threads should be positive ({n} found) !')
+    
+    return n
 
 ##-Ui parser
 class ParserUi:
@@ -35,15 +69,14 @@ class ParserUi:
         #------Main parser
         #---Init
         examples = 'Examples :'
-        examples += '\n\tconvert `file.mei`                       : ./main.py file.mei'
-        examples += '\n\tconvert all mei files in the mei/ folder : ./main.py mei/*.mei'
-        examples += '\n\tconvert all mei files in the sub path    : ./main.py **/*.mei'
-        examples += '\n\tconvert all, overwrite, save in cypher/,'
-        examples += '\n\t generate .cql, show progression         : ./main.py -nv -q load_all.cql -o cypher/ **/*.mei'
+        examples += '\n\t./main.py [hash]'
+        examples += '\n\t./main.py -a 0123456789 [hash]'
+        examples += '\n\t./main.py -a 0123456789 -A sha256 [hash]'
+        examples += '\n\t./main.py -t 12 [hash]'
 
         self.parser = argparse.ArgumentParser(
-            prog='Musypher',
-            description='Compiles fuzzy queries to cypher queries',
+            prog='HashCracker',
+            description='Multithreaded hash cracker',
             epilog=examples,
             formatter_class=argparse.RawDescriptionHelpFormatter
         )
@@ -56,48 +89,37 @@ class ParserUi:
             action=self.Version
         )
         self.parser.add_argument(
-            '-v', '--verbose',
+            '-s', '--silent',
             action='store_true',
-            help='print logs when a file is converted'
+            help='only print the password and nothing else'
         )
 
         self.parser.add_argument(
-            '-n', '--no-confirmation',
-            action='store_true',
-            help='Do not ask for confirmation before overwriting a file'
+            '-A', '--algorithm',
+            default='md5',
+            type=hash_algo,
+            help='the hash algorithm. Defaults to "md5".'
+        )
+        self.parser.add_argument(
+            '-a', '--alphabet',
+            default='[a-z]',
+            help='the alphabet to use. Can be [0-9], [a-z], [a-z0-9], [a-zA-Z], [a-zA-Z0-9], or directly the raw alphabet'
         )
 
         self.parser.add_argument(
-            '-o', '--output-folder',
-            type=folder_arg,
-            help='save all dumps in the given folder'
+            '-t', '--nb-threads',
+            type=positive_int,
+            help='Specify the number of threads to use. If not set, it gets the number of thread available on the current machine'
+        )
+        self.parser.add_argument(
+            '-l', '--limit',
+            type=int,
+            help='If used, limit the length of words to LIMIT'
         )
 
         self.parser.add_argument(
-            '-q', '--cql',
-            help='If enabled, also create the .cql file (that is useful to load all the generated .cypher in the database)'
-        )
-
-        # self.parser.add_argument(
-        #     '-U', '--URI',
-        #     default='bolt://localhost:7687',
-        #     help='the uri to the neo4j database'
-        # )
-        # self.parser.add_argument(
-        #     '-u', '--user',
-        #     default='neo4j',
-        #     help='the username to access the database'
-        # )
-        # self.parser.add_argument(
-        #     '-p', '--password',
-        #     default='12345678',
-        #     help='the password to access the database'
-        # )
-
-        self.parser.add_argument(
-            'files',
-            nargs='+',
-            help='the MEI files to convert. For each file, it adds "_dump.cypher" to the basename of the file.'
+            'hash',
+            help='the hash to crack'
         )
 
     def parse(self):
@@ -106,34 +128,11 @@ class ParserUi:
         #---Get arguments
         args = self.parser.parse_args()
 
-        dump_files = []
+        alf = args.alphabet
+        if alf in alphabets:
+            alf = alphabets[alf]
 
-        for k, f in enumerate(args.files):
-            if not isfile(f):
-                log('warn', f'"{f}" is not a file !')
-
-            else:
-                dump_fn = make_dump_fn(f, args.output_folder)
-
-                if args.verbose:
-                    log('info', f'Converting file "{f}" to "{dump_fn}" ...')
-
-                converter = MeiToGraph(f, args.verbose)
-                res = converter.to_file(dump_fn, args.no_confirmation)
-
-                if res:
-                    log('info', f'File "{f}" has been converted to cypher in file "{dump_fn}" ! {round((k + 1) / len(args.files) * 100)}% done !')
-                    dump_files.append(dump_fn)
-
-                else:
-                    log('info', f'Conversion for the file "{f}" has been canceled ! {round((k + 1) / len(args.files) * 100)}% done !')
-        
-        if args.cql != None:
-            if len(dump_files) == 0:
-                log('warn', f'Generation of {args.cql} canceled as no file was generated !')
-                return
-
-            self._make_cql_file(dump_files, args.cql, args.no_confirmation, args.verbose)
+        launch_multithreads(args.hash, alf, args.algorithm, args.limit, verbose=(not args.silent), nb_threads=args.nb_threads)
 
 
     class Version(argparse.Action):
