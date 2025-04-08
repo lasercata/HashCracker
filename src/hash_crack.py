@@ -27,7 +27,7 @@ class BruteForceGen:
         '''
 
         self.alf = alf
-        self.N = len(alf)
+        self.N = len(alf) + 1
 
     def _convert_to_base(self, n: int) -> list[int]:
         '''
@@ -54,26 +54,26 @@ class BruteForceGen:
         '''
         Return the word number `n`.
 
-        It converts `n` to base `self.N`.
+        It converts `n` to base `self.N + 1`.
 
-        E.g :
-            0 -> a
-            1 -> b
+        E.g with the alphabet `az` :
+            0 -> z
+            1 -> a
+            2 -> b
             ...
-            25 -> z
-            26 -> ba
-            27 -> bb
-            28 -> bc
+            25 -> y
+            26 -> z
+            27 -> az
+            28 -> aa
+            29 -> ab
             ...
-
-        Note that 'aa', 'aaa', ... are missing (because they correspond to 00, 000, ... = 0).
 
         - n : the index of the word.
         '''
     
         digits = self._convert_to_base(n)[::-1]
 
-        return ''.join(self.alf[k] for k in digits)
+        return ''.join(self.alf[k - 1] for k in digits)
 
 ##-Hash
 def hasher(txt: str, h: str) -> str:
@@ -116,7 +116,8 @@ if __name__ == '__main__':
 
     G = BruteForceGen(alf)
 
-    for k in (0, 1, 2, 24, 25, 26, 27):
+    # for k in (0, 1, 2, 3, 23, 24, 25, 26, 27):
+    for k in range(1000):
         print(k, G.get_word(k))
 
     # for k in range(1000):
