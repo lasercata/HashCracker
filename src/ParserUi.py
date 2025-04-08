@@ -25,12 +25,12 @@ from src.hash_crack import algorithms_available
 version = '1.0.0'
 
 alphabets = {
-    '[0-9]': '0123456789',
-    '[a-z]': 'abcdefghijklmnopqrstuvwxyz',
-    '[A-Z]': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-    '[a-z0-9]': 'abcdefghijklmnopqrstuvwxyz0123456789',
-    '[a-zA-Z]': 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-    '[a-zA-Z0-9]': 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+    '09': '0123456789',
+    'az': 'abcdefghijklmnopqrstuvwxyz',
+    'AZ': 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    'az09': 'abcdefghijklmnopqrstuvwxyz0123456789',
+    'azAZ': 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    'azAZ09': 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
 }
 
 ##-Types
@@ -70,9 +70,10 @@ class ParserUi:
         #---Init
         examples = 'Examples :'
         examples += '\n\t./main.py [hash]'
-        examples += '\n\t./main.py -a 0123456789 [hash]'
-        examples += '\n\t./main.py -a 0123456789 -A sha256 [hash]'
+        examples += '\n\t./main.py -a az09 [hash]'
+        examples += '\n\t./main.py -a 0123456789abcdef -A sha256 [hash]'
         examples += '\n\t./main.py -t 12 [hash]'
+        examples += '\n\t./main.py -m 4 -l 6 [hash]'
 
         self.parser = argparse.ArgumentParser(
             prog='HashCracker',
@@ -102,8 +103,8 @@ class ParserUi:
         )
         self.parser.add_argument(
             '-a', '--alphabet',
-            default='[a-z]',
-            help='the alphabet to use. Can be [0-9], [a-z], [a-z0-9], [a-zA-Z], [a-zA-Z0-9], or directly the raw alphabet'
+            default='az',
+            help=f'the alphabet to use. Can be in {list(alphabets.keys())}, or directly the raw alphabet'
         )
 
         self.parser.add_argument(
