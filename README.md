@@ -2,6 +2,8 @@
 
 Multithreaded hash cracker.
 
+This project has been rewrote in C : check [lasercata/HashCrackerC](https://github.com/lasercata/HashCrackerC)
+
 ## Usage
 ### Setup
 Get the code :
